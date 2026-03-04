@@ -1,0 +1,168 @@
+{
+  "project_context": {
+    "framework": "Expo (React Native + Web)",
+    "styling_strategy": "StyleSheet or NativeWind (Tailwind is listed in prompt but missing in package.json - verify before use)",
+    "component_strategy": "Custom components mimicking Shadcn/UI (Standard Shadcn is DOM-based, not RN-compatible). Use View/Text/Pressable primitives.",
+    "theme": "Dark Mode Only (#141414)"
+  },
+  "typography": {
+    "fonts": {
+      "heading": {
+        "family": "Syne, sans-serif",
+        "description": "Art-gallery vibe, wide and confident. Use for H1-H3.",
+        "fallback": "System Sans-Serif (iOS: San Francisco, Android: Roboto)",
+        "google_font_url": "https://fonts.googleapis.com/css2?family=Syne:wght@400..800&display=swap"
+      },
+      "body": {
+        "family": "Manrope, sans-serif",
+        "description": "Clean, geometric, highly legible. Use for all UI text.",
+        "fallback": "System Sans-Serif",
+        "google_font_url": "https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap"
+      },
+      "mono": {
+        "family": "JetBrains Mono, monospace",
+        "description": "Use for metadata, dates, and tags."
+      }
+    },
+    "scale": {
+      "h1": { "size": 36, "weight": "700", "lineHeight": 40, "letterSpacing": -0.5 },
+      "h2": { "size": 28, "weight": "700", "lineHeight": 32, "letterSpacing": -0.5 },
+      "h3": { "size": 24, "weight": "600", "lineHeight": 28, "letterSpacing": 0 },
+      "body_lg": { "size": 18, "weight": "400", "lineHeight": 26 },
+      "body": { "size": 16, "weight": "400", "lineHeight": 24 },
+      "caption": { "size": 12, "weight": "500", "lineHeight": 16, "letterSpacing": 1.0, "textTransform": "uppercase" }
+    }
+  },
+  "colors": {
+    "background": {
+      "default": "#141414",
+      "surface": "#1A1A1A",
+      "surface_highlight": "#222222",
+      "overlay": "rgba(20, 20, 20, 0.9)"
+    },
+    "brand": {
+      "lime": "#B5CC6A",
+      "coral": "#E8846A",
+      "cream": "#F5E6C8",
+      "lavender": "#A89EC4"
+    },
+    "text": {
+      "primary": "#F5F5F5",
+      "secondary": "#A3A3A3",
+      "muted": "#737373",
+      "inverse": "#141414"
+    },
+    "border": {
+      "subtle": "rgba(255, 255, 255, 0.08)",
+      "visible": "rgba(255, 255, 255, 0.15)",
+      "active": "#B5CC6A"
+    }
+  },
+  "layout_specs": {
+    "spacing": {
+      "xs": 4,
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "xl": 32,
+      "xxl": 48
+    },
+    "radius": {
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24,
+      "full": 9999
+    }
+  },
+  "components_guide": {
+    "card": {
+      "style": {
+        "backgroundColor": "#1A1A1A",
+        "borderRadius": 16,
+        "borderWidth": 1,
+        "borderColor": "rgba(255, 255, 255, 0.08)",
+        "padding": 16
+      },
+      "behavior": "No shadow by default. On Press: Scale 0.98 + Border color slightly lighter."
+    },
+    "button": {
+      "primary": {
+        "backgroundColor": "#B5CC6A",
+        "borderRadius": 9999,
+        "paddingVertical": 12,
+        "paddingHorizontal": 24,
+        "shadowColor": "#B5CC6A",
+        "shadowOpacity": 0.2,
+        "shadowRadius": 10
+      },
+      "secondary": {
+        "backgroundColor": "rgba(255,255,255,0.05)",
+        "borderWidth": 1,
+        "borderColor": "rgba(255,255,255,0.1)",
+        "borderRadius": 9999
+      }
+    },
+    "input": {
+      "style": {
+        "backgroundColor": "#0A0A0A",
+        "borderWidth": 1,
+        "borderColor": "rgba(255,255,255,0.1)",
+        "borderRadius": 12,
+        "color": "#FFFFFF",
+        "padding": 16,
+        "fontSize": 16
+      }
+    },
+    "navigation": {
+      "tab_bar": {
+        "backgroundColor": "rgba(26, 26, 26, 0.9)",
+        "blurEffect": "dark",
+        "borderTopWidth": 0,
+        "elevation": 0,
+        "height": 60
+      }
+    }
+  },
+  "assets": {
+    "images": {
+      "textures": [
+        "https://images.unsplash.com/photo-1550684656-1353d3e6418d?auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1625143142600-dd13ed07d93a?auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1667771428712-7056dbee6317?auto=format&fit=crop&q=80"
+      ],
+      "architecture": [
+        "https://images.unsplash.com/photo-1528015402566-571c088bb94e?auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1764824080417-2db640c66142?auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1763850407750-4671769329c1?auto=format&fit=crop&q=80"
+      ],
+      "avatars": [
+        "https://images.unsplash.com/photo-1761001311816-b2a0481e3577?auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1761429943284-906a779416d5?auto=format&fit=crop&q=80",
+        "https://images.pexels.com/photos/30004323/pexels-photo-30004323.jpeg?auto=compress&cs=tinysrgb&h=650"
+      ]
+    },
+    "icons": {
+      "set": "Lucide (via lucide-react-native) or Feather (via @expo/vector-icons)",
+      "default_size": 24,
+      "default_color": "#A3A3A3"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Verify if 'nativewind' is installed. If NOT, use `StyleSheet.create` with the values provided in `layout_specs` and `colors`.",
+    "Do NOT use HTML elements (`div`, `span`, `img`). Use `View`, `Text`, `Image`, `Pressable`, `ScrollView`, `FlatList`.",
+    "For the 'Masonry/Bento' layout: Use a 2-column layout on mobile, 3-4 on desktop. Use `FlexWrap` or a dedicated masonry component.",
+    "Implement a 'Quick Save' Modal using `Modal` or `BottomSheet`.",
+    "Use 'Syne' font (load via `expo-font`). If loading fails, fallback to System Sans.",
+    "For the 'Team' section, use the `avatars` images provided.",
+    "Ensure the background is always #141414 (Dark Mode).",
+    "Add `data-testid` to all interactive elements for testing."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Don't make generic centered layouts. Use asymmetry.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Dark colors look good when used independently without gradients.",
+    "Add micro-animations to every interaction (Pressable states).",
+    "Avoid using AI emoji characters."
+  ]
+}
