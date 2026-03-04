@@ -47,6 +47,14 @@ export default function RootLayout() {
         <AppProvider>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="preview"
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
           </Stack>
           <StatusBar style="light" />
         </AppProvider>

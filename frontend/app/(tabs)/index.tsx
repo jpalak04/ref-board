@@ -12,6 +12,7 @@ import RefCard from '../../src/components/RefCard';
 import Logo from '../../src/components/Logo';
 import { colors, fonts, spacing, radius } from '../../src/constants/theme';
 import { deleteRef } from '../../src/lib/supabase';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -19,12 +20,24 @@ const isTablet = width >= 768;
 
 export default function HomeScreen() {
   const { refs, categories, loading, refreshRefs } = useApp();
+  const router = useRouter();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
+
+  const handleCardPress = useCallback((item: any) => {
+    if (!item.url) return;
+    router.push({
+      pathname: '/preview',
+      params: {
+        url: encodeURIComponent(item.url),
+        title: encodeURIComponent(item.title || 'Preview'),
+      },
+    } as any);
+  }, [router]);
 
   const filtered = useMemo(() => {
     let result = refs;
@@ -157,8 +170,10 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       key={item.id}
                       activeOpacity={0.9}
+                      onPress={() => handleCardPress(item)}
                       onLongPress={() => setSelectedRef(item.id)}
                       delayLongPress={500}
+                      testID={`card-press-${item.id}`}
                     >
                       <RefCard item={item} categories={categories} />
                     </TouchableOpacity>

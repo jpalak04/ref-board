@@ -602,11 +602,16 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.lime,
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.lime,
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 6 },
+      },
+      android: { elevation: 6 },
+      web: {},
+    }),
   },
   saveBtnText: {
     fontFamily: fonts.heading,

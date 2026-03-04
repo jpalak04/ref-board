@@ -74,7 +74,13 @@ RefBoard is a team reference library for saving links, reels, images and notes f
 - RefBoard logo: 4-tile grid mark (lime/coral/cream/lavender) + "RefBoard" wordmark
 - Bottom tab: Board, Save (lime FAB), Categories, Team
 
-### Share Intent Setup
+### In-App Browser Preview Screen (added 2026-03-04)
+- Tap any ref card → opens `/preview` screen as a modal
+- Native: Full embedded WebView (react-native-webview) with custom header + URL bar + back/forward/reload controls
+- Web: Shows URL preview with "Open in Browser" button (sites like Instagram block iframe embeds)
+- Back arrow (←) returns to board
+- External link icon (↗) opens in system browser
+- Graceful error state when site blocks embedded preview
 - App scheme: `refboard://`
 - Android intent filters for `text/plain` SEND action
 - Deep link handler ready for native share sheet (requires EAS build for full native share)

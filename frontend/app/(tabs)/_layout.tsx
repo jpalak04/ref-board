@@ -130,11 +130,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    shadowColor: colors.lime,
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.lime,
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 6 },
+      web: {},
+    }),
   },
   addTabBtn: {
     flex: 1,
