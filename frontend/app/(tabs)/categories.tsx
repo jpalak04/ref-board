@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useApp } from '../../src/context/AppContext';
-import { colors, fonts, spacing, radius, CATEGORY_COLORS } from '../../src/constants/theme';
+import { colors, fonts, spacing, radius, CATEGORY_COLORS, getCategoryColor } from '../../src/constants/theme';
 import { insertCategory, updateCategory, deleteCategory } from '../../src/lib/supabase';
 
 function generateId() {
@@ -125,7 +125,7 @@ export default function CategoriesScreen() {
           <View testID={`category-card-${cat.id}`} key={cat.id} style={styles.catCard}>
             <View style={styles.catHeader}>
               <View style={styles.catLeft}>
-                <View style={[styles.colorBar, { backgroundColor: cat.color || colors.lime }]} />
+                <View style={[styles.colorBar, { backgroundColor: getCategoryColor(cat.color) }]} />
                 <Text style={styles.catName}>{cat.name}</Text>
               </View>
               <View style={styles.catActions}>
@@ -147,11 +147,14 @@ export default function CategoriesScreen() {
             </View>
             {cat.subs && cat.subs.length > 0 && (
               <View style={styles.subWrap}>
-                {cat.subs.map((sub) => (
-                  <View key={sub} style={[styles.subChip, { borderColor: (cat.color || colors.lime) + '40' }]}>
-                    <Text style={[styles.subChipText, { color: cat.color || colors.lime }]}>{sub}</Text>
-                  </View>
-                ))}
+                {cat.subs.map((sub) => {
+                  const catHex = getCategoryColor(cat.color);
+                  return (
+                    <View key={sub} style={[styles.subChip, { borderColor: catHex + '40' }]}>
+                      <Text style={[styles.subChipText, { color: catHex }]}>{sub}</Text>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </View>

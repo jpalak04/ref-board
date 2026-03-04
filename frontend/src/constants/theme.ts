@@ -21,6 +21,31 @@ export const colors = {
   borderActive: '#B5CC6A',
 };
 
+// Map Supabase color name strings to hex
+const COLOR_NAME_MAP: Record<string, string> = {
+  lime: '#B5CC6A',
+  coral: '#E8846A',
+  cream: '#F5E6C8',
+  lavender: '#A89EC4',
+  teal: '#7CB9A0',
+  mint: '#7CB9A0',
+  amber: '#D4956A',
+  peach: '#E8AC6A',
+  sky: '#9BB8D3',
+  blue: '#9BB8D3',
+  pink: '#C9A0A0',
+  rose: '#C9A0A0',
+  purple: '#A89EC4',
+  green: '#B5CC6A',
+  orange: '#E8846A',
+};
+
+export function getCategoryColor(color: string): string {
+  if (!color) return colors.lime;
+  if (color.startsWith('#')) return color;
+  return COLOR_NAME_MAP[color.toLowerCase()] || colors.lime;
+}
+
 export const spacing = {
   xs: 4,
   sm: 8,

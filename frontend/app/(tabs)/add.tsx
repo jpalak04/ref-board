@@ -10,7 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../../src/context/AppContext';
-import { colors, fonts, spacing, radius, TYPE_CONFIG, CATEGORY_COLORS } from '../../src/constants/theme';
+import { colors, fonts, spacing, radius, TYPE_CONFIG, CATEGORY_COLORS, getCategoryColor } from '../../src/constants/theme';
 import { fetchOG, aiAutofill } from '../../src/lib/api';
 import { insertRef, buildDescription } from '../../src/lib/supabase';
 
@@ -94,12 +94,22 @@ export default function AddScreen() {
             categories.map((c) => ({ id: c.id, name: c.name, subs: c.subs || [] }))
           );
           if (ai.cat_id) {
-            setCatId(ai.cat_id);
-            setAiSuggested(true);
+            // Validate cat_id against actual categories (by ID or by name fallback)
+            const matchById = categories.find((c) => c.id === ai.cat_id);
+            const matchByName = !matchById
+              ? categories.find((c) => c.name.toLowerCase() === (ai.cat_id || '').toLowerCase())
+              : null;
+            const matched = matchById || matchByName;
+            if (matched) {
+              setCatId(matched.id);
+              setAiSuggested(true);
+            }
           }
           if (ai.subcat) setSubcat(ai.subcat);
           if (ai.content_type) setType(ai.content_type as RefType);
-        } catch {}
+        } catch (aiErr) {
+          console.warn('AI autofill error:', aiErr);
+        }
         setFetchingAI(false);
       }
     } catch (e) {
@@ -292,7 +302,7 @@ export default function AddScreen() {
             >
               {selectedCat ? (
                 <View style={styles.selectorRow}>
-                  <View style={[styles.catDot, { backgroundColor: selectedCat.color || colors.lime }]} />
+                  <View style={[styles.catDot, { backgroundColor: getCategoryColor(selectedCat.color) }]} />
                   <Text style={styles.selectorText}>{selectedCat.name}</Text>
                   {aiSuggested && <Text style={styles.aiTag}>AI</Text>}
                 </View>
@@ -409,7 +419,7 @@ export default function AddScreen() {
                     setShowCatModal(false);
                   }}
                 >
-                  <View style={[styles.catOptionDot, { backgroundColor: cat.color || colors.lime }]} />
+                  <View style={[styles.catOptionDot, { backgroundColor: getCategoryColor(cat.color) }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.catOptionName}>{cat.name}</Text>
                     {cat.subs?.length > 0 && (

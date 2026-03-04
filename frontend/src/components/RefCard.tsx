@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { colors, fonts, radius, spacing, TYPE_CONFIG } from '../constants/theme';
+import { colors, fonts, radius, spacing, TYPE_CONFIG, getCategoryColor } from '../constants/theme';
 import { Ref, Category, parseDescription } from '../lib/supabase';
 
 interface RefCardProps {
@@ -28,7 +28,7 @@ export default function RefCard({ item, categories }: RefCardProps) {
   const { text: descText, image: thumbnail } = parseDescription(item.description);
   const category = categories.find((c) => c.id === item.cat_id);
   const typeConfig = TYPE_CONFIG[item.type] || TYPE_CONFIG.link;
-  const catColor = category?.color || colors.lavender;
+  const catColor = getCategoryColor(category?.color || '');
 
   return (
     <View testID={`ref-card-${item.id}`} style={styles.card}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, fonts, radius, spacing } from '../constants/theme';
+import { colors, fonts, radius, spacing, getCategoryColor } from '../constants/theme';
 import { Category } from '../lib/supabase';
 
 interface FilterBarProps {
@@ -44,20 +44,21 @@ export default function FilterBar({
         </TouchableOpacity>
         {categories.map((cat) => {
           const isActive = selectedCat === cat.id;
+          const catHexColor = getCategoryColor(cat.color);
           return (
             <TouchableOpacity
               testID={`filter-cat-${cat.id}`}
               key={cat.id}
               style={[
                 styles.chip,
-                isActive && { backgroundColor: (cat.color || colors.lime) + '25', borderColor: cat.color || colors.lime },
+                isActive && { backgroundColor: catHexColor + '25', borderColor: catHexColor },
               ]}
               onPress={() => onSelectCat(isActive ? null : cat.id)}
             >
               {cat.color ? (
-                <View style={[styles.dot, { backgroundColor: cat.color }]} />
+                <View style={[styles.dot, { backgroundColor: catHexColor }]} />
               ) : null}
-              <Text style={[styles.chipText, isActive && { color: cat.color || colors.lime }]}>
+              <Text style={[styles.chipText, isActive && { color: catHexColor }]}>
                 {cat.name}
               </Text>
             </TouchableOpacity>
