@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - app-v2
+      - app
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -30,12 +31,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
 
       - name: Install dependencies
         working-directory: ./frontend
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
       - name: Build web app
         working-directory: ./frontend
