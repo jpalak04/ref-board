@@ -21,9 +21,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
     
     steps:
       - name: Checkout repository
@@ -37,15 +34,19 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
 
       - name: Install dependencies
+        working-directory: ./frontend
         run: yarn install --frozen-lockfile
 
       - name: Build web app
+        working-directory: ./frontend
         env:
-          # These will be replaced with actual values in GitHub Secrets
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_BACKEND_URL: ${{ secrets.EXPO_PUBLIC_BACKEND_URL }}
         run: npx expo export --platform web
+
+      - name: Add .nojekyll file
+        run: touch ./frontend/dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -53,7 +54,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/dist
+          path: ./frontend/dist
 
   deploy:
     environment:
