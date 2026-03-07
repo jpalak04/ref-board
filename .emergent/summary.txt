@@ -1,0 +1,165 @@
+<analysis>
+
+**original_problem_statement:**
+The user wants to build a mobile + desktop app called RefBoard for teams to save and organize links, images, and notes.
+
+**PRODUCT REQUIREMENTS (V2 - based on the latest user request):**
+- **Tech Stack:** React Native Web / Expo for iOS, Android, and web.
+- **Backend:** Connect to an existing Supabase database, extending the schema as needed.
+- **Role-Based Access Control (RBAC):**
+    - Two roles: Founder and Team Member.
+    - Founders see all content; Members see only content on their assigned Boards.
+    - Access is controlled by selecting a name and entering a 4-digit PIN (no formal login).
+- **Boards:** A new data entity for organizing references, created by Founders and assigned to Team Members.
+- **Core AI Features (Gemini):**
+    - **AI Auto-fill:** On sharing/pasting a URL, automatically fetch metadata (OpenGraph) and use Gemini to suggest category, sub-category, type, and 3 smart searchable tags.
+    - **AI Similar Ideas:** On viewing a reference, display a panel of 3 similar references from the same board.
+    - **AI Action Tagging:** Suggest whether a reference is for Inspiration or To Execute.
+- **Actionable Workflow:**
+    - A dedicated To Execute view showing all items with that action tag.
+- **Engagement:**
+    - A This Week in-app view summarizing all items saved in the past week.
+- **Core Mobile Feature:** App must be available in the iOS/Android share sheet for quick saving.
+- **Deployment:** Deploy the web version to GitHub Pages.
+- **Design:** Dark mode only, premium feel, with a specific warm, muted color palette and editorial-style layout.
+- **Real-time:** Use Supabase Realtime to show updates live across the team.
+
+**User's preferred language**: English
+
+**what currently exists?**
+A functional version of the initial, simpler app. It includes:
+- A single, shared board for all users.
+- Screens for the home feed, adding a reference (with basic AI auto-fill), managing categories, and settings.
+- An in-app browser for previewing links, implemented using .
+- Connection to the Supabase backend.
+- A dark-mode UI that matches the initial design specifications.
+- A GitHub Actions workflow file () for deployment to GitHub Pages.
+
+**Last working item**:
+- **Last item agent was working:** The agent was preparing to implement a major feature overhaul based on a new, detailed problem statement from the user (message #170). The agent prepared the necessary SQL  and  statements to update the Supabase database schema to support the new requirements (Boards, Roles, Tags, etc.) and presented this SQL to the user to run in their Supabase dashboard.
+- **Status:** NOT STARTED (Implementation of the new features has not begun).
+- **Agent Testing Done:** N/A (The new features have not been built yet).
+- **Which testing method agent to use?** both
+- **User Testing Done:** N/A
+
+**All Pending/In progress Issue list**:
+There are no pending bugs from the previous implementation. The entire pending list consists of the new V2 features requested by the user.
+
+**In progress Task List**:
+- **Task 1: Overhaul application to support V2 features (P0)**
+    - This is a large, overarching task that encompasses all the new requirements. The previous agent had just prepared the database schema changes.
+    - **Where to resume:** Assume the user has executed the SQL provided in message #174. The next step is to start a full-plan-and-execute cycle for the new features.
+    - **What will be achieved with this?** The app will be transformed from a simple, single-board tool into a multi-board, role-based system with advanced AI capabilities, action tagging, and weekly digests.
+    - **Status:** NOT STARTED
+    - **Should Test frontend/backend/both after fix?** both
+    - **Blocked on something:** User needs to confirm they have run the provided SQL to update the database schema. The next agent should start by asking for this confirmation.
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks (P0 - This is the core work for the next session):**
+    1.  **Backend Schema Extension:** Create new API endpoints and update existing ones to handle the new tables: , , , .
+    2.  **Authentication Flow:** Implement the Name Picker + 4-digit PIN access control system.
+    3.  **RBAC Logic (Backend & Frontend):**
+        - Founder View: Fetch and display all boards and references.
+        - Team Member View: Fetch and display only the assigned board and its references.
+    4.  **AI Feature - Smart Tags:** Enhance the  function in  to generate 3 searchable tags using Gemini.
+    5.  **AI Feature - Action Tagging:** Update the  function to suggest Inspiration or To Execute.
+    6.  **AI Feature - Similar Ideas:** Implement a new backend endpoint that takes a  and uses Gemini (or simple text similarity as a fallback) to find 3 similar references.
+    7.  **New Screens & Components:**
+        - **Team Settings:** Build the UI for Founders to create boards and manage team members.
+        - **Reference Detail View:** A new screen to show a single reference, including the new Similar Ideas panel.
+        - **To Execute View:** A new screen/tab that filters for refs with the To Execute action tag.
+        - **This Week Digest View:** A new screen/tab that shows a summary of the last 7 days of saved refs.
+- **Future Tasks (P1):**
+    1.  **Share Sheet Integration:** Implement the native share extension for iOS and Android using Expo's capabilities.
+    2.  **Weekly Digest Notifications:** Implement email or Telegram notifications for the weekly digest.
+    3.  **GitHub Pages Deployment:** Finalize and test the deployment workflow created in .
+
+**Completed work in this session**
+- **V1 Application Built:**
+    - Implemented a single-board reference app with a Home Feed, Quick Save, Category Management, and Settings screens.
+    - Integrated Supabase for the backend data store.
+    - Integrated Gemini API for basic URL metadata auto-fill ().
+    - Fixed UI color mapping issues by creating and using .
+    - Created a complete UI based on the initial dark-mode design spec.
+- **In-App Browser (P0):**
+    - Added  to open links.
+    - Created a preview screen at .
+    - Made reference cards on the home screen () tappable.
+- **GitHub Pages Setup (P0):**
+    - Created  to facilitate web deployment.
+    - Updated  with the required .
+
+**Earlier issues found/mentioned but not fixed**
+None. The agent has been diligent in addressing issues as they arose. The current pending work is a result of a major requirements change from the user, not missed issues.
+
+**Known issue recurrence from previous fork**
+- **Issue recurrence in previous fork:** None
+- **Recurrence count:** 0
+- **Status:** RESOLVED
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Frameworks:** Expo (React Native), FastAPI (Python)
+- **Database:** Supabase (PostgreSQL)
+- **State Management:** Zustand
+- **AI:** Google Gemini API for content analysis and generation.
+- **UI:** Dark mode, custom color palette, tab-based navigation with a modal screen for the link preview.
+- **Deployment:** GitHub Actions for web deployment to GitHub Pages.
+
+**key DB schema**
+The agent has proposed the following new schema. **The next agent must confirm with the user that this has been applied.**
+- ****: uid=0(root) gid=0(root) groups=0(root), , 
+- ****: uid=0(root) gid=0(root) groups=0(root), , ,  ('founder' or 'member')
+- ****: ,  (Join table)
+- ****: uid=0(root) gid=0(root) groups=0(root), 
+- ****: ,  (Join table)
+- ** (Altered)**: Added ,  ('inspiration' or 'to_execute')
+
+**changes in tech stack**
+No changes in the core tech stack. The changes are primarily in the application logic and database schema to support a more complex feature set.
+
+**All files of reference**
+*   : Will need significant updates for new AI features (tagging, similar ideas) and new endpoints for boards/roles.
+*   : Will need to be updated with new table interfaces and queries for the V2 features.
+*   : Will likely need to be modified to include the new To Execute and This Week tabs.
+*   : Will need to be refactored to fetch data based on the user's board and role.
+*   : The AI auto-fill logic needs to be updated to handle smart tags and action tags.
+*   : Created for GitHub Pages deployment.
+*   : The created screen for the in-app browser.
+
+**Critical Info for New Agent**
+- **Major Pivot:** The project has undergone a significant requirements change. Do not continue with the old V1 logic. The task is to build the V2 features from the ground up, using the existing code as a base.
+- **Confirm DB Migration:** Your first action should be to use  to confirm with the user that they have successfully run the SQL script provided in message #174. You cannot proceed without the new database schema.
+- **Access Flow:** The user chose a simple Name Picker + PIN flow. This will be the new authentication mechanism.
+- **SQL for Schema:** The required SQL to update the database is located in the agent's thought process for message #174.
+
+**documents created in this job**
+- 
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User (latest):** Clarifies choices for the new V2 features: can run SQL, simple text similarity is fine for Similar Ideas, weekly digest is in-app only, provides board/team size estimates, and chooses a Name Picker + PIN for access control. **(Status: Addressed by agent's plan)**.
+2.  **User:** Provides a massive, detailed new problem statement, introducing RBAC, boards, advanced AI features, action tagging, and new screens. **(Status: This is the new primary task)**.
+3.  **User:** Asks for the GitHub Pages deployment workflow file to be added. **(Status: Completed by agent)**.
+4.  **User:** Asks to add an in-app browser and save code to GitHub. **(Status: In-app browser completed. GitHub save explained as a manual user action)**.
+
+**Project Health Check:**
+- **Working:** The V1 version of the application is built and functional.
+- **Awaiting Rework:** The entire application is now slated for a major refactoring to accommodate the V2 feature set.
+
+**3rd Party Integrations**
+- **Supabase:** Used for the database and real-time features.
+  - URL: 
+- **Google Gemini:** Used for AI-based content analysis and generation. Requires a User API Key ().
+
+**Testing status**
+- **Testing agent used after significant changes:** YES (Used after the V1 build was complete).
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:** None.
+- **Known regressions:** None from the V1 build.
+
+**What agent forgot to execute**
+The agent has not forgotten anything. It was in the process of planning the implementation of a major new set of user requirements when the fork occurred. The last action was providing the user with the necessary SQL to migrate their database schema.
+
+</analysis>

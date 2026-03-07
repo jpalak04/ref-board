@@ -3,13 +3,8 @@ import { TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../src/constants/theme';
-import { useRouter } from 'expo-router';
 
-function TabBarButton({
-  children,
-  onPress,
-  accessibilityState,
-}: any) {
+function TabBarButton({ children, onPress, accessibilityState }: any) {
   const focused = accessibilityState?.selected;
   return (
     <TouchableOpacity
@@ -24,16 +19,12 @@ function TabBarButton({
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [
-          styles.tabBar,
-          { paddingBottom: insets.bottom + 4 },
-        ],
+        tabBarStyle: [styles.tabBar, { paddingBottom: insets.bottom + 4 }],
         tabBarActiveTintColor: colors.lime,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
@@ -44,9 +35,15 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Board',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="grid" size={size - 2} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="grid" size={size - 2} color={color} />,
+          tabBarButton: (props) => <TabBarButton {...props} />,
+        }}
+      />
+      <Tabs.Screen
+        name="execute"
+        options={{
+          title: 'Execute',
+          tabBarIcon: ({ color, size }) => <Feather name="zap" size={size - 2} color={color} />,
           tabBarButton: (props) => <TabBarButton {...props} />,
         }}
       />
@@ -55,32 +52,20 @@ export default function TabLayout() {
         options={{
           title: 'Save',
           tabBarIcon: ({ color }) => (
-            <View
-              testID="add-tab-btn"
-              style={[
-                styles.addBtn,
-                { backgroundColor: colors.lime },
-              ]}
-            >
+            <View testID="add-tab-btn" style={[styles.addBtn, { backgroundColor: colors.lime }]}>
               <Feather name="plus" size={22} color={colors.textInverse} />
             </View>
           ),
           tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              style={styles.addTabBtn}
-              activeOpacity={0.85}
-            />
+            <TouchableOpacity {...props} style={styles.addTabBtn} activeOpacity={0.85} />
           ),
         }}
       />
       <Tabs.Screen
-        name="categories"
+        name="digest"
         options={{
-          title: 'Categories',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="folder" size={size - 2} color={color} />
-          ),
+          title: 'This Week',
+          tabBarIcon: ({ color, size }) => <Feather name="calendar" size={size - 2} color={color} />,
           tabBarButton: (props) => <TabBarButton {...props} />,
         }}
       />
@@ -88,10 +73,15 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Team',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="users" size={size - 2} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="users" size={size - 2} color={color} />,
           tabBarButton: (props) => <TabBarButton {...props} />,
+        }}
+      />
+      {/* Hide categories from bottom tabs but keep it accessible */}
+      <Tabs.Screen
+        name="categories"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>
@@ -120,7 +110,7 @@ const styles = StyleSheet.create({
   tabBtnActive: {},
   tabLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
   },
   addBtn: {

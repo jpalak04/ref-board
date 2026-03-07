@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, RefreshControl, Dimensions, Modal, Alert,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -19,7 +18,7 @@ const isDesktop = width >= 1024;
 const isTablet = width >= 768;
 
 export default function HomeScreen() {
-  const { refs, categories, loading, refreshRefs } = useApp();
+  const { refs, categories, loading, refreshRefs, session, currentBoard, logout } = useApp();
   const router = useRouter();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -27,16 +26,10 @@ export default function HomeScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
 
   const handleCardPress = useCallback((item: any) => {
-    if (!item.url) return;
-    router.push({
-      pathname: '/preview',
-      params: {
-        url: encodeURIComponent(item.url),
-        title: encodeURIComponent(item.title || 'Preview'),
-      },
-    } as any);
+    router.push({ pathname: '/ref-detail', params: { id: item.id } } as any);
   }, [router]);
 
   const filtered = useMemo(() => {
@@ -46,7 +39,10 @@ export default function HomeScreen() {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (r) => r.title?.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q)
+        (r) => 
+          r.title?.toLowerCase().includes(q) || 
+          (r.description || '').toLowerCase().includes(q) ||
+          r.tags?.some(t => t.toLowerCase().includes(q))
       );
     }
     return result;
@@ -80,11 +76,20 @@ export default function HomeScreen() {
     ]);
   }, []);
 
+  const handleLogout = useCallback(() => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
+    ]);
+  }, [logout]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Logo size="md" />
+        <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuBtn}>
+          <Logo size="md" />
+        </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
             testID="search-toggle-btn"
@@ -105,6 +110,14 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Board indicator for members */}
+      {session?.role === 'member' && currentBoard && (
+        <View style={styles.boardBanner}>
+          <Feather name="folder" size={14} color={colors.lavender} />
+          <Text style={styles.boardBannerText}>{currentBoard.name}</Text>
+        </View>
+      )}
+
       {/* Search bar */}
       {showSearch && (
         <View style={styles.searchWrap}>
@@ -112,7 +125,7 @@ export default function HomeScreen() {
           <TextInput
             testID="search-input"
             style={styles.searchInput}
-            placeholder="Search titles, descriptions…"
+            placeholder="Search titles, descriptions, tags…"
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -214,6 +227,55 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Menu modal */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={styles.menuSheet}>
+            <View style={styles.menuHeader}>
+              <Logo size="sm" />
+              <Text style={styles.menuUserName}>{session?.name}</Text>
+              <View style={[styles.roleBadge, session?.role === 'founder' && styles.roleBadgeFounder]}>
+                <Text style={[styles.roleBadgeText, session?.role === 'founder' && styles.roleBadgeTextFounder]}>
+                  {session?.role === 'founder' ? 'Founder' : 'Member'}
+                </Text>
+              </View>
+            </View>
+            {session?.role === 'founder' && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => { setShowMenu(false); router.push('/team-setup'); }}
+              >
+                <Feather name="settings" size={18} color={colors.textSecondary} />
+                <Text style={styles.menuItemText}>Team Setup</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { setShowMenu(false); router.push('/(tabs)/categories'); }}
+            >
+              <Feather name="folder" size={18} color={colors.textSecondary} />
+              <Text style={styles.menuItemText}>Categories</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuItem, { borderTopWidth: 1, borderTopColor: colors.borderSubtle }]}
+              onPress={() => { setShowMenu(false); handleLogout(); }}
+            >
+              <Feather name="log-out" size={18} color={colors.coral} />
+              <Text style={[styles.menuItemText, { color: colors.coral }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -229,6 +291,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
+  menuBtn: { padding: 4 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: { padding: 6 },
   clearBtn: {
@@ -238,6 +301,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
   },
   clearText: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.textSecondary },
+  boardBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    backgroundColor: colors.lavender + '10',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lavender + '20',
+  },
+  boardBannerText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.lavender },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -313,4 +387,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
+  menuSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderVisible,
+    padding: spacing.lg,
+  },
+  menuHeader: {
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    marginBottom: spacing.md,
+  },
+  menuUserName: { fontFamily: fonts.heading, fontSize: 18, color: colors.textPrimary, marginTop: 8 },
+  roleBadge: {
+    backgroundColor: colors.surfaceHigh,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  roleBadgeFounder: { backgroundColor: colors.lavender + '25' },
+  roleBadgeText: { fontFamily: fonts.bodySemi, fontSize: 11, color: colors.textMuted },
+  roleBadgeTextFounder: { color: colors.lavender },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+  },
+  menuItemText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.textPrimary },
 });

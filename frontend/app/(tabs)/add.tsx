@@ -10,9 +10,9 @@ import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../../src/context/AppContext';
-import { colors, fonts, spacing, radius, TYPE_CONFIG, CATEGORY_COLORS, getCategoryColor } from '../../src/constants/theme';
+import { colors, fonts, spacing, radius, TYPE_CONFIG, getCategoryColor } from '../../src/constants/theme';
 import { fetchOG, aiAutofill } from '../../src/lib/api';
-import { insertRef, buildDescription } from '../../src/lib/supabase';
+import { insertRef, buildDescription, setRefTags } from '../../src/lib/supabase';
 
 const TYPES = ['link', 'reel', 'image', 'note'] as const;
 type RefType = typeof TYPES[number];
@@ -22,7 +22,7 @@ function isValidUrl(url: string) {
 }
 
 export default function AddScreen() {
-  const { categories, teamMembers, selectedMember, setSelectedMember } = useApp();
+  const { categories, session, assignedBoards, refreshTags } = useApp();
   const params = useLocalSearchParams<{ url?: string }>();
   const router = useRouter();
 
@@ -33,7 +33,9 @@ export default function AddScreen() {
   const [type, setType] = useState<RefType>('link');
   const [catId, setCatId] = useState<string | null>(null);
   const [subcat, setSubcat] = useState<string | null>(null);
-  const [author, setAuthor] = useState(selectedMember || teamMembers[0] || '');
+  const [boardId, setBoardId] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [actionTag, setActionTag] = useState<'inspiration' | 'to_execute'>('inspiration');
 
   const [fetchingOG, setFetchingOG] = useState(false);
   const [fetchingAI, setFetchingAI] = useState(false);
@@ -41,10 +43,17 @@ export default function AddScreen() {
   const [saved, setSaved] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
   const [showCatModal, setShowCatModal] = useState(false);
+  const [showBoardModal, setShowBoardModal] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const successAnim = useRef(new Animated.Value(0)).current;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Set default board
+  useEffect(() => {
+    if (!boardId && assignedBoards.length > 0) {
+      setBoardId(assignedBoards[0].id);
+    }
+  }, [assignedBoards, boardId]);
 
   // Handle incoming URL from deep link / share
   useEffect(() => {
@@ -83,7 +92,7 @@ export default function AddScreen() {
       if (og.image) setThumbnail(og.image);
       if (og.type) setType(og.type as RefType);
 
-      // Now run AI categorization
+      // Now run AI categorization with tags
       if (categories.length > 0) {
         setFetchingAI(true);
         try {
@@ -94,7 +103,6 @@ export default function AddScreen() {
             categories.map((c) => ({ id: c.id, name: c.name, subs: c.subs || [] }))
           );
           if (ai.cat_id) {
-            // Validate cat_id against actual categories (by ID or by name fallback)
             const matchById = categories.find((c) => c.id === ai.cat_id);
             const matchByName = !matchById
               ? categories.find((c) => c.name.toLowerCase() === (ai.cat_id || '').toLowerCase())
@@ -107,6 +115,8 @@ export default function AddScreen() {
           }
           if (ai.subcat) setSubcat(ai.subcat);
           if (ai.content_type) setType(ai.content_type as RefType);
+          if (ai.tags && Array.isArray(ai.tags)) setTags(ai.tags.slice(0, 3));
+          if (ai.action_tag) setActionTag(ai.action_tag);
         } catch (aiErr) {
           console.warn('AI autofill error:', aiErr);
         }
@@ -126,26 +136,34 @@ export default function AddScreen() {
   const handleSave = useCallback(async () => {
     if (!url.trim()) { Alert.alert('Missing URL', 'Please enter a URL to save'); return; }
     if (!catId) { Alert.alert('Missing Category', 'Please select a category'); return; }
-    if (!author.trim()) { Alert.alert('Missing Author', 'Please select your name'); return; }
+    if (!boardId) { Alert.alert('Missing Board', 'Please select a board'); return; }
 
     setSaving(true);
     try {
+      const refId = generateId();
       await insertRef({
-        id: generateId(),
+        id: refId,
         type,
         title: title || url,
         url,
         description: buildDescription(description, thumbnail),
         cat_id: catId,
         subcat: subcat || '',
-        author: author.trim(),
+        author: session?.name || 'Team',
+        board_id: boardId,
+        action_tag: actionTag,
       });
+
+      // Save tags
+      if (tags.length > 0) {
+        await setRefTags(refId, tags);
+        await refreshTags();
+      }
 
       // Success animation
       Animated.sequence([
-        Animated.timing(successAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.delay(800),
-        Animated.timing(successAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 0.5, duration: 200, useNativeDriver: true }),
+        Animated.delay(500),
       ]).start(() => {
         setSaved(false);
         resetForm();
@@ -156,14 +174,20 @@ export default function AddScreen() {
       Alert.alert('Save failed', e?.message || 'Could not save reference');
     }
     setSaving(false);
-  }, [url, title, description, thumbnail, type, catId, subcat, author]);
+  }, [url, title, description, thumbnail, type, catId, subcat, boardId, tags, actionTag, session, refreshTags]);
 
   const resetForm = () => {
     setUrl(''); setTitle(''); setDescription(''); setThumbnail(null);
     setType('link'); setCatId(null); setSubcat(null); setAiSuggested(false);
+    setTags([]); setActionTag('inspiration');
+  };
+
+  const handleRemoveTag = (index: number) => {
+    setTags(tags.filter((_, i) => i !== index));
   };
 
   const selectedCat = categories.find((c) => c.id === catId);
+  const selectedBoard = assignedBoards.find((b) => b.id === boardId);
   const availableSubs = selectedCat?.subs || [];
   const isLoading = fetchingOG || fetchingAI;
 
@@ -207,11 +231,7 @@ export default function AddScreen() {
                 returnKeyType="done"
                 multiline={false}
               />
-              <TouchableOpacity
-                testID="paste-btn"
-                onPress={handlePaste}
-                style={styles.pasteBtn}
-              >
+              <TouchableOpacity testID="paste-btn" onPress={handlePaste} style={styles.pasteBtn}>
                 <Feather name="clipboard" size={16} color={colors.lime} />
               </TouchableOpacity>
             </View>
@@ -231,11 +251,7 @@ export default function AddScreen() {
           {(thumbnail || title) ? (
             <Animated.View style={[styles.previewCard, { opacity: fadeAnim }]}>
               {thumbnail ? (
-                <Image
-                  source={{ uri: thumbnail }}
-                  style={styles.previewThumb}
-                  contentFit="cover"
-                />
+                <Image source={{ uri: thumbnail }} style={styles.previewThumb} contentFit="cover" />
               ) : null}
               <View style={styles.previewContent}>
                 {aiSuggested && (
@@ -266,9 +282,31 @@ export default function AddScreen() {
             </Animated.View>
           ) : null}
 
+          {/* Board Picker */}
+          {assignedBoards.length > 1 && (
+            <View style={styles.section}>
+              <Text style={styles.label}>SAVE TO BOARD</Text>
+              <TouchableOpacity
+                testID="board-picker-btn"
+                style={styles.selectorBtn}
+                onPress={() => setShowBoardModal(true)}
+              >
+                {selectedBoard ? (
+                  <View style={styles.selectorRow}>
+                    <Feather name="folder" size={16} color={colors.lavender} />
+                    <Text style={styles.selectorText}>{selectedBoard.name}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.selectorPlaceholder}>Select board…</Text>
+                )}
+                <Feather name="chevron-down" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Type Picker */}
           <View style={styles.section}>
-            <Text style={styles.label}>Type</Text>
+            <Text style={styles.label}>TYPE</Text>
             <View style={styles.typeRow}>
               {TYPES.map((t) => {
                 const cfg = TYPE_CONFIG[t];
@@ -277,24 +315,46 @@ export default function AddScreen() {
                   <TouchableOpacity
                     testID={`type-pill-${t}`}
                     key={t}
-                    style={[
-                      styles.typePill,
-                      active && { backgroundColor: cfg.color + '25', borderColor: cfg.color },
-                    ]}
+                    style={[styles.typePill, active && { backgroundColor: cfg.color + '25', borderColor: cfg.color }]}
                     onPress={() => setType(t)}
                   >
-                    <Text style={[styles.typePillText, active && { color: cfg.color }]}>
-                      {cfg.label}
-                    </Text>
+                    <Text style={[styles.typePillText, active && { color: cfg.color }]}>{cfg.label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </View>
 
+          {/* Action Tag */}
+          <View style={styles.section}>
+            <Text style={styles.label}>ACTION</Text>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                testID="action-inspiration"
+                style={[styles.actionPill, actionTag === 'inspiration' && styles.actionPillActive]}
+                onPress={() => setActionTag('inspiration')}
+              >
+                <Feather name="star" size={14} color={actionTag === 'inspiration' ? colors.lavender : colors.textMuted} />
+                <Text style={[styles.actionPillText, actionTag === 'inspiration' && { color: colors.lavender }]}>
+                  Inspiration
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="action-execute"
+                style={[styles.actionPill, actionTag === 'to_execute' && styles.actionPillExecute]}
+                onPress={() => setActionTag('to_execute')}
+              >
+                <Feather name="zap" size={14} color={actionTag === 'to_execute' ? colors.coral : colors.textMuted} />
+                <Text style={[styles.actionPillText, actionTag === 'to_execute' && { color: colors.coral }]}>
+                  To Execute
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Category Picker */}
           <View style={styles.section}>
-            <Text style={styles.label}>Category</Text>
+            <Text style={styles.label}>CATEGORY</Text>
             <TouchableOpacity
               testID="category-picker-btn"
               style={styles.selectorBtn}
@@ -314,12 +374,7 @@ export default function AddScreen() {
 
             {/* Sub-category */}
             {availableSubs.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.subScroll}
-                contentContainerStyle={styles.subRow}
-              >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subScroll} contentContainerStyle={styles.subRow}>
                 {availableSubs.map((sub) => (
                   <TouchableOpacity
                     testID={`subcat-pill-${sub}`}
@@ -327,18 +382,13 @@ export default function AddScreen() {
                     style={[
                       styles.subPill,
                       subcat === sub && {
-                        backgroundColor: (selectedCat?.color || colors.lime) + '25',
-                        borderColor: selectedCat?.color || colors.lime,
+                        backgroundColor: getCategoryColor(selectedCat?.color || '') + '25',
+                        borderColor: getCategoryColor(selectedCat?.color || ''),
                       },
                     ]}
                     onPress={() => setSubcat(subcat === sub ? null : sub)}
                   >
-                    <Text
-                      style={[
-                        styles.subPillText,
-                        subcat === sub && { color: selectedCat?.color || colors.lime },
-                      ]}
-                    >
+                    <Text style={[styles.subPillText, subcat === sub && { color: getCategoryColor(selectedCat?.color || '') }]}>
                       {sub}
                     </Text>
                   </TouchableOpacity>
@@ -347,35 +397,20 @@ export default function AddScreen() {
             )}
           </View>
 
-          {/* Author Picker */}
+          {/* Tags */}
           <View style={styles.section}>
-            <Text style={styles.label}>Saved by</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.authorRow}
-            >
-              {teamMembers.map((member) => (
-                <TouchableOpacity
-                  testID={`author-chip-${member}`}
-                  key={member}
-                  style={[
-                    styles.authorChip,
-                    author === member && styles.authorChipActive,
-                  ]}
-                  onPress={() => { setAuthor(member); setSelectedMember(member); }}
-                >
-                  <View style={[styles.authorAvatar, author === member && { backgroundColor: colors.lime }]}>
-                    <Text style={[styles.authorInitial, author === member && { color: colors.textInverse }]}>
-                      {member[0].toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={[styles.authorName, author === member && { color: colors.lime }]}>
-                    {member}
-                  </Text>
+            <Text style={styles.label}>SMART TAGS</Text>
+            <View style={styles.tagsRow}>
+              {tags.map((tag, i) => (
+                <TouchableOpacity key={i} style={styles.tagChip} onPress={() => handleRemoveTag(i)}>
+                  <Text style={styles.tagChipText}>{tag}</Text>
+                  <Feather name="x" size={12} color={colors.textMuted} />
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+              {tags.length === 0 && (
+                <Text style={styles.noTags}>AI will suggest tags when you paste a URL</Text>
+              )}
+            </View>
           </View>
         </ScrollView>
 
@@ -433,6 +468,34 @@ export default function AddScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Board Modal */}
+      <Modal visible={showBoardModal} transparent animationType="slide" onRequestClose={() => setShowBoardModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowBoardModal(false)}>
+          <View style={styles.catModal}>
+            <Text style={styles.modalTitle}>Select Board</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {assignedBoards.map((board) => (
+                <TouchableOpacity
+                  testID={`board-option-${board.id}`}
+                  key={board.id}
+                  style={[styles.catOption, boardId === board.id && styles.catOptionActive]}
+                  onPress={() => {
+                    setBoardId(board.id);
+                    setShowBoardModal(false);
+                  }}
+                >
+                  <Feather name="folder" size={18} color={colors.lavender} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.catOptionName}>{board.name}</Text>
+                  </View>
+                  {boardId === board.id && <Feather name="check" size={16} color={colors.lime} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -447,206 +510,100 @@ function generateId() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   headerTitle: { fontFamily: fonts.heading, fontSize: 22, color: colors.textPrimary, letterSpacing: -0.5 },
   iconBtn: { padding: 6 },
   content: { padding: spacing.md, gap: spacing.lg, paddingBottom: 20 },
   section: { gap: spacing.sm },
-  label: { fontFamily: fonts.bodySemi, fontSize: 11, color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase' },
+  label: { fontFamily: fonts.bodySemi, fontSize: 11, color: colors.textMuted, letterSpacing: 0.8 },
   urlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderVisible,
-    overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderVisible, overflow: 'hidden',
   },
   urlInput: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.textPrimary,
-    padding: spacing.md,
+    flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.textPrimary, padding: spacing.md,
   },
-  pasteBtn: {
-    padding: spacing.md,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.borderSubtle,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 4,
-  },
+  pasteBtn: { padding: spacing.md, borderLeftWidth: 1, borderLeftColor: colors.borderSubtle },
+  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   loadingText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textMuted },
   previewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderVisible,
-    overflow: 'hidden',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderVisible, overflow: 'hidden',
   },
   previewThumb: { width: '100%', height: 180 },
   previewContent: { padding: spacing.md, gap: 8 },
   aiBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.lime + '20',
-    borderRadius: radius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.lime + '40',
+    alignSelf: 'flex-start', backgroundColor: colors.lime + '20', borderRadius: radius.full,
+    paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.lime + '40',
   },
   aiBadgeText: { fontFamily: fonts.bodySemi, fontSize: 11, color: colors.lime },
-  titleInput: {
-    fontFamily: fonts.headingSemi,
-    fontSize: 16,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-  descInput: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 19,
-    maxHeight: 80,
-  },
+  titleInput: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, lineHeight: 22 },
+  descInput: { fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary, lineHeight: 19, maxHeight: 80 },
   typeRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   typePill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  typePillText: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 12,
-    color: colors.textMuted,
-    letterSpacing: 0.5,
+  typePillText: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.textMuted, letterSpacing: 0.5 },
+  actionRow: { flexDirection: 'row', gap: spacing.sm },
+  actionPill: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle,
   },
+  actionPillActive: { backgroundColor: colors.lavender + '15', borderColor: colors.lavender + '50' },
+  actionPillExecute: { backgroundColor: colors.coral + '15', borderColor: colors.coral + '50' },
+  actionPillText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textMuted },
   selectorBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderVisible,
-    padding: spacing.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1,
+    borderColor: colors.borderVisible, padding: spacing.md,
   },
   selectorRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   selectorText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textPrimary },
   selectorPlaceholder: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted },
   catDot: { width: 10, height: 10, borderRadius: 5 },
   aiTag: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 10,
-    color: colors.lime,
-    backgroundColor: colors.lime + '20',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: radius.full,
+    fontFamily: fonts.bodySemi, fontSize: 10, color: colors.lime, backgroundColor: colors.lime + '20',
+    paddingHorizontal: 5, paddingVertical: 1, borderRadius: radius.full,
   },
   subScroll: { marginTop: 4 },
   subRow: { gap: 8, paddingVertical: 2 },
   subPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.borderSubtle,
   },
   subPillText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textMuted },
-  authorRow: { gap: 10, paddingVertical: 2 },
-  authorChip: {
-    alignItems: 'center',
-    gap: 5,
-    padding: 8,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    minWidth: 64,
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tagChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.surfaceHigh, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full,
   },
-  authorChipActive: {
-    backgroundColor: colors.lime + '15',
-    borderColor: colors.lime + '60',
-  },
-  authorAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authorInitial: { fontFamily: fonts.heading, fontSize: 15, color: colors.textPrimary },
-  authorName: { fontFamily: fonts.bodyMedium, fontSize: 11, color: colors.textSecondary },
-  saveWrap: {
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-  },
+  tagChipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },
+  noTags: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
+  saveWrap: { padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   saveBtn: {
-    backgroundColor: colors.lime,
-    borderRadius: radius.full,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.lime, borderRadius: radius.full, paddingVertical: 16,
+    alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
-      ios: {
-        shadowColor: colors.lime,
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 6 },
-      },
+      ios: { shadowColor: colors.lime, shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
       android: { elevation: 6 },
       web: {},
     }),
   },
-  saveBtnText: {
-    fontFamily: fonts.heading,
-    fontSize: 16,
-    color: colors.textInverse,
-    letterSpacing: -0.3,
-  },
+  saveBtnText: { fontFamily: fonts.heading, fontSize: 16, color: colors.textInverse, letterSpacing: -0.3 },
   savedRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   catModal: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.borderVisible,
-    padding: spacing.lg,
-    maxHeight: '70%',
+    backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.borderVisible, padding: spacing.lg, maxHeight: '70%',
   },
-  modalTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 18,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
+  modalTitle: { fontFamily: fonts.heading, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.md },
   catOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   catOptionActive: { backgroundColor: colors.surfaceHigh },
   catOptionDot: { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },

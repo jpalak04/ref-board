@@ -1,13 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
+import { Feather } from '@expo/vector-icons';
 import { colors, fonts, radius, spacing, TYPE_CONFIG, getCategoryColor } from '../constants/theme';
 import { Ref, Category, parseDescription } from '../lib/supabase';
 
+interface RefWithTags extends Ref {
+  tags?: string[];
+}
+
 interface RefCardProps {
-  item: Ref;
+  item: RefWithTags;
   categories: Category[];
   onDelete?: (id: string) => void;
+  compact?: boolean;
 }
 
 function timeAgo(dateStr: string): string {
@@ -24,17 +30,18 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(days / 30)}mo`;
 }
 
-export default function RefCard({ item, categories }: RefCardProps) {
+export default function RefCard({ item, categories, compact = false }: RefCardProps) {
   const { text: descText, image: thumbnail } = parseDescription(item.description);
   const category = categories.find((c) => c.id === item.cat_id);
   const typeConfig = TYPE_CONFIG[item.type] || TYPE_CONFIG.link;
   const catColor = getCategoryColor(category?.color || '');
+  const tags = item.tags || [];
 
   return (
-    <View testID={`ref-card-${item.id}`} style={styles.card}>
+    <View testID={`ref-card-${item.id}`} style={[styles.card, compact && styles.cardCompact]}>
       {/* Thumbnail */}
       {thumbnail ? (
-        <View style={styles.thumbContainer}>
+        <View style={[styles.thumbContainer, compact && styles.thumbContainerCompact]}>
           <Image
             source={{ uri: thumbnail }}
             style={styles.thumb}
@@ -44,22 +51,45 @@ export default function RefCard({ item, categories }: RefCardProps) {
           <View style={styles.typeBadge}>
             <Text style={[styles.typeText, { color: typeConfig.color }]}>{typeConfig.label}</Text>
           </View>
+          {item.action_tag === 'to_execute' && (
+            <View style={styles.actionIndicator}>
+              <Feather name="zap" size={10} color={colors.coral} />
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.noThumbHeader}>
           <View style={[styles.typePill, { borderColor: typeConfig.color + '40' }]}>
             <Text style={[styles.typeText, { color: typeConfig.color }]}>{typeConfig.label}</Text>
           </View>
+          {item.action_tag === 'to_execute' && (
+            <View style={[styles.actionIndicator, { position: 'relative', marginLeft: 6 }]}>
+              <Feather name="zap" size={10} color={colors.coral} />
+            </View>
+          )}
         </View>
       )}
 
       {/* Content */}
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>{item.title || 'Untitled'}</Text>
+      <View style={[styles.content, compact && styles.contentCompact]}>
+        <Text style={[styles.title, compact && styles.titleCompact]} numberOfLines={compact ? 1 : 2}>
+          {item.title || 'Untitled'}
+        </Text>
 
-        {descText ? (
+        {!compact && descText ? (
           <Text style={styles.desc} numberOfLines={2}>{descText}</Text>
         ) : null}
+
+        {/* Tags */}
+        {!compact && tags.length > 0 && (
+          <View style={styles.tagsRow}>
+            {tags.slice(0, 3).map((tag, i) => (
+              <View key={i} style={styles.tagPill}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.footer}>
           {category ? (
@@ -67,15 +97,17 @@ export default function RefCard({ item, categories }: RefCardProps) {
               <View style={[styles.catDot, { backgroundColor: catColor }]} />
               <Text style={[styles.catText, { color: catColor }]} numberOfLines={1}>
                 {category.name}
-                {item.subcat ? ` · ${item.subcat}` : ''}
+                {!compact && item.subcat ? ` · ${item.subcat}` : ''}
               </Text>
             </View>
           ) : null}
-          <View style={styles.meta}>
-            <Text style={styles.author}>{item.author || 'Team'}</Text>
-            <Text style={styles.dot}>·</Text>
-            <Text style={styles.time}>{timeAgo(item.created_at)}</Text>
-          </View>
+          {!compact && (
+            <View style={styles.meta}>
+              <Text style={styles.author}>{item.author || 'Team'}</Text>
+              <Text style={styles.dot}>·</Text>
+              <Text style={styles.time}>{timeAgo(item.created_at)}</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -91,10 +123,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing.md,
   },
+  cardCompact: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
   thumbContainer: {
     position: 'relative',
     width: '100%',
     aspectRatio: 1.6,
+  },
+  thumbContainerCompact: {
+    width: 80,
+    height: 80,
+    aspectRatio: 1,
   },
   thumb: {
     width: '100%',
@@ -108,6 +149,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  actionIndicator: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: colors.coral + '30',
+    borderRadius: radius.full,
+    padding: 4,
   },
   noThumbHeader: {
     paddingHorizontal: spacing.md,
@@ -131,17 +180,43 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: 6,
   },
+  contentCompact: {
+    flex: 1,
+    padding: spacing.sm,
+    justifyContent: 'center',
+  },
   title: {
     fontFamily: fonts.headingSemi,
     fontSize: 14,
     color: colors.textPrimary,
     lineHeight: 20,
   },
+  titleCompact: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
   desc: {
     fontFamily: fonts.body,
     fontSize: 12,
     color: colors.textSecondary,
     lineHeight: 17,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 2,
+  },
+  tagPill: {
+    backgroundColor: colors.surfaceHigh,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  tagText: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: colors.textMuted,
   },
   footer: {
     marginTop: 4,
