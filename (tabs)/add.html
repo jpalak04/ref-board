@@ -1,10 +1,7 @@
 <!DOCTYPE html><html  lang="en" style="height:100%"><head><script>
 (function() {
-  // Handle SPA redirect from 404.html
   var p = new URLSearchParams(window.location.search).get('p');
-  if (p) {
-    window.history.replaceState(null, '', '/ref-board' + (p.startsWith('/') ? '' : '/') + p);
-  }
+  if (p) window.history.replaceState(null, '', '/ref-board' + (p.startsWith('/') ? '' : '/') + p);
 })();
 </script><title data-rh="true"></title><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><style id="expo-reset">#root,body,html{height:100%}body{overflow:hidden}#root{display:flex}</style><style>
               body > div:first-child { position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; }
@@ -343,5 +340,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @keyframes r-1pzkwqh{0%{transform:translateY(100%);}100%{transform:translateY(0%);}}
 @keyframes r-imtty0{0%{opacity:0;}100%{opacity:1;}}
 @keyframes r-q67da2{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
-@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="icon" href="/ref-board/favicon.ico" /></head><body  style="margin:0;height:100%;overflow:hidden;display:flex;flex-direction:column"><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><!--/$--></div></div><script src="/ref-board/_expo/static/js/web/entry-baf05dbc06ae19355bf5997e7eb3d21c.js" defer></script>
+@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=false;</script><link rel="icon" href="/ref-board/favicon.ico" /></head><body  style="margin:0;height:100%;overflow:hidden;display:flex;flex-direction:column"><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><!--/$--></div></div><script src="/ref-board/_expo/static/js/web/entry-baf05dbc06ae19355bf5997e7eb3d21c.js" defer></script>
 </body></html>
