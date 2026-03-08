@@ -1,82 +1,10 @@
 <!DOCTYPE html><html  lang="en" style="height:100%"><head><script>
 (function() {
-  var BASE = '/ref-board';
-  console.log('[RefBoard Debug] Original pathname:', window.location.pathname);
-  console.log('[RefBoard Debug] Original href:', window.location.href);
-  
   // Handle SPA redirect from 404.html
-  var redirect = new URLSearchParams(window.location.search).get('p');
-  if (redirect) {
-    console.log('[RefBoard Debug] Redirect param:', redirect);
-    var newPath = BASE + (redirect.startsWith('/') ? '' : '/') + redirect;
-    window.history.replaceState(null, '', newPath);
+  var p = new URLSearchParams(window.location.search).get('p');
+  if (p) {
+    window.history.replaceState(null, '', '/ref-board' + (p.startsWith('/') ? '' : '/') + p);
   }
-  
-  // Store original
-  var _origPathname = window.location.pathname;
-  
-  // Override pathname getter on Location.prototype
-  try {
-    var desc = Object.getOwnPropertyDescriptor(Location.prototype, 'pathname');
-    if (desc && desc.get) {
-      var origGetter = desc.get;
-      Object.defineProperty(Location.prototype, 'pathname', {
-        get: function() {
-          var p = origGetter.call(this);
-          var result = p;
-          if (p === BASE) result = '/';
-          else if (p === BASE + '/') result = '/';
-          else if (p.indexOf(BASE + '/') === 0) result = p.substring(BASE.length);
-          console.log('[RefBoard Patch] pathname:', p, '->', result);
-          return result;
-        },
-        configurable: true,
-        enumerable: true
-      });
-      console.log('[RefBoard Debug] Pathname patch applied to Location.prototype');
-    }
-  } catch(e) {
-    console.error('[RefBoard Debug] Failed to patch Location.prototype:', e);
-  }
-  
-  // Also try patching the specific location object
-  try {
-    Object.defineProperty(window.location, 'pathname', {
-      get: function() {
-        var p = _origPathname;
-        if (p === BASE) return '/';
-        if (p === BASE + '/') return '/';
-        if (p.indexOf(BASE + '/') === 0) return p.substring(BASE.length);
-        return p;
-      },
-      configurable: true
-    });
-    console.log('[RefBoard Debug] Pathname patch applied to window.location');
-  } catch(e) {
-    console.log('[RefBoard Debug] Could not patch window.location directly (expected):', e.message);
-  }
-  
-  // Patch history
-  var origPush = history.pushState;
-  var origReplace = history.replaceState;
-  
-  history.pushState = function(s, t, u) {
-    if (u && typeof u === 'string' && u.charAt(0) === '/' && u.indexOf(BASE) !== 0) {
-      u = BASE + u;
-    }
-    console.log('[RefBoard Patch] pushState:', u);
-    return origPush.call(this, s, t, u);
-  };
-  
-  history.replaceState = function(s, t, u) {
-    if (u && typeof u === 'string' && u.charAt(0) === '/' && u.indexOf(BASE) !== 0) {
-      u = BASE + u;
-    }
-    console.log('[RefBoard Patch] replaceState:', u);
-    return origReplace.call(this, s, t, u);
-  };
-  
-  console.log('[RefBoard Debug] After patch, pathname reads as:', window.location.pathname);
 })();
 </script><title data-rh="true"></title><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><style id="expo-reset">#root,body,html{height:100%}body{overflow:hidden}#root{display:flex}</style><style>
               body > div:first-child { position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; }
