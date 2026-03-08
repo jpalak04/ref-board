@@ -2,10 +2,15 @@
 (function() {
   var BASE = '/ref-board';
   
-  // Store original pathname getter
-  var defined = false;
-  var origDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'pathname');
+  // Handle SPA redirect from 404.html
+  var redirect = new URLSearchParams(window.location.search).get('p');
+  if (redirect) {
+    var newPath = BASE + (redirect.startsWith('/') ? '' : '/') + redirect;
+    window.history.replaceState(null, '', newPath);
+  }
   
+  // Patch Location.prototype.pathname to strip base path
+  var origDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'pathname');
   if (origDesc && origDesc.get) {
     Object.defineProperty(Location.prototype, 'pathname', {
       get: function() {
@@ -14,30 +19,28 @@
         if (p.indexOf(BASE + '/') === 0) return p.substring(BASE.length);
         return p;
       },
-      configurable: true
+      configurable: true,
+      enumerable: true
     });
-    defined = true;
   }
   
-  // Patch pushState/replaceState to add base
-  var origPush = history.pushState;
-  var origReplace = history.replaceState;
+  // Patch history methods to add base path
+  var origPush = history.pushState.bind(history);
+  var origReplace = history.replaceState.bind(history);
   
   history.pushState = function(s, t, u) {
     if (u && typeof u === 'string' && u.charAt(0) === '/' && u.indexOf(BASE) !== 0) {
       u = BASE + u;
     }
-    return origPush.call(this, s, t, u);
+    return origPush(s, t, u);
   };
   
   history.replaceState = function(s, t, u) {
     if (u && typeof u === 'string' && u.charAt(0) === '/' && u.indexOf(BASE) !== 0) {
       u = BASE + u;
     }
-    return origReplace.call(this, s, t, u);
+    return origReplace(s, t, u);
   };
-  
-  console.log('[RefBoard] Base path patch applied, defined:', defined);
 })();
 </script><title data-rh="true"></title><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><style id="expo-reset">#root,body,html{height:100%}body{overflow:hidden}#root{display:flex}</style><style>
               body > div:first-child { position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; }

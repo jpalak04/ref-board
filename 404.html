@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>RefBoard</title>
+  <script>
+    // Single Page App redirect for GitHub Pages
+    // Converts path to query string so index.html can handle it
+    var pathSegmentsToKeep = 1; // Keep /ref-board
+    var l = window.location;
+    var repo = '/ref-board';
+    
+    // Get the path after /ref-board
+    var path = l.pathname.slice(repo.length);
+    
+    // Redirect to index with path as query param
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      repo + '/?p=' + encodeURIComponent(path + l.search).replace(/%2F/g, '/') +
+      (l.hash ? l.hash : '')
+    );
+  </script>
+</head>
+<body>
+  Redirecting...
+</body>
+</html>
